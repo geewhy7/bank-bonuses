@@ -1,0 +1,102 @@
+{% macro render_card(b, is_admin, today) %}
+<div class="card st-{{ 'closed' if b.status == 'closed' else ('progress' if b.status == 'in_progress' else 'available') }}"
+     id="card-{{ b.id }}" data-id="{{ b.id }}"
+     data-bonus="{{ b.bonus }}" data-name="{{ b.name }}" data-status="{{ b.status }}"
+     data-paid="{{ 'true' if b.paid else 'false' }}" data-balance="{{ b.balance_status }}">
+  <div class="card-head">
+    <div>
+      <h2>{{ b.name }}</h2>
+      <div class="subtitle">{{ b.subtitle }}</div>
+      <div class="tag-row">
+        {% if b.status == 'available' %}
+          <span class="badge available">Available</span>
+        {% elif b.status == 'in_progress' %}
+          <span class="badge in_progress">{{ 'Paid — awaiting closure' if b.paid else 'In progress' }}</span>
+        {% else %}
+          <span class="badge closed">Cooldown</span>
+        {% endif %}
+        <span class="balance-tag {{ b.balance_status }}" title="{{ b.balance_note }}">
+          {% if b.balance_status == 'required' %}&#9888; Balance required{% elif b.balance_status == 'advisory' %}&#9679; No hold, but…{% else %}&#10003; No balance required{% endif %}
+        </span>
+      </div>
+    </div>
+    <div class="amount">${{ "{:,}".format(b.bonus) }}</div>
+  </div>
+
+  <div class="detail"><b>Requirement:</b> {{ b.requirement }}</div>
+  <div class="detail"><b>Balance:</b> {{ b.balance_note }}</div>
+  <div class="detail"><b>Monthly fee:</b> {{ b.monthly_fee }}</div>
+  <div class="detail"><b>Exit:</b> {{ b.exit_text }}</div>
+  <div class="detail"><b>Cooldown:</b> {{ b.cooldown_text }}</div>
+
+  {% if b.status == 'available' %}
+    {% if is_admin %}
+    <form method="post" action="{{ url_for('start_bank', bank_id=b.id) }}" class="js-action">
+      <button type="submit" class="btn">Start tracking</button>
+    </form>
+    {% endif %}
+
+  {% elif b.status == 'in_progress' %}
+    <div class="started-row">
+      Started
+      {% if is_admin %}
+      <form method="post" action="{{ url_for('set_started_date', bank_id=b.id) }}" class="js-action">
+        <input type="date" name="started" value="{{ b.started }}" max="{{ today }}" onchange="this.form.requestSubmit()">
+      </form>
+      {% else %}
+        <strong>{{ b.started }}</strong>
+      {% endif %}
+    </div>
+
+    <div class="checklist">
+      {% for item in b.checklist %}
+        {% set checked = b.checked[loop.index0] %}
+        <label class="{{ 'checked' if checked else '' }}">
+          {% if is_admin %}
+          <form method="post" action="{{ url_for('toggle_check', bank_id=b.id, index=loop.index0) }}" class="js-action">
+            <input type="checkbox" onchange="this.form.requestSubmit()" {{ 'checked' if checked else '' }}>
+          </form>
+          {% else %}
+          <input type="checkbox" disabled {{ 'checked' if checked else '' }}>
+          {% endif %}
+          {{ item }}
+        </label>
+      {% endfor %}
+    </div>
+
+    <div class="paid-row {{ 'is-paid' if b.paid else '' }}">
+      {% if is_admin %}
+      <form method="post" action="{{ url_for('toggle_paid', bank_id=b.id) }}" class="js-action">
+        <label class="toggle-label">
+          <span class="toggle-switch"><input type="checkbox" onchange="this.form.requestSubmit()" {{ 'checked' if b.paid else '' }}><span class="toggle-track"></span></span>
+          Payment received
+        </label>
+      </form>
+      {% else %}
+        <label class="toggle-label"><span class="toggle-switch"><input type="checkbox" disabled {{ 'checked' if b.paid else '' }}><span class="toggle-track"></span></span> Payment received</label>
+      {% endif %}
+    </div>
+
+    {% if b.can_close %}
+      <div class="closure-badge ready">Safe to close — eligible since {{ b.safe_close_date }}</div>
+    {% else %}
+      <div class="closure-badge pending">Safe to close on {{ b.safe_close_date }} (you can still close it early below if you've already wrapped it up)</div>
+    {% endif %}
+    {% if is_admin %}
+    <div class="row-actions">
+      <form method="post" action="{{ url_for('close_bank', bank_id=b.id) }}" class="js-action">
+        <button type="submit" class="btn">Close account</button>
+      </form>
+      <form method="post" action="{{ url_for('abandon_bank', bank_id=b.id) }}" class="js-action">
+        <button type="submit" class="btn linklike" data-confirm="Stop tracking {{ b.name }}? This discards its progress without starting a cooldown.">Stop tracking</button>
+      </form>
+    </div>
+    {% endif %}
+
+  {% else %}
+    <div class="cooldown-info">
+      Closed {{ b.closed_date }}{% if b.eligible_again %} — eligible again {{ b.eligible_again }}{% else %} — one-time bonus, not eligible again{% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endmacro %}

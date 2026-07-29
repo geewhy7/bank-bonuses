@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, abort, redirect, render_template, request, session, url_for
+from flask import Flask, abort, jsonify, redirect, render_template, request, session, url_for
 
 from banks import BANKS
 
@@ -171,6 +171,39 @@ def bank_view(bank, state):
     return v
 
 
+def compute_totals(views):
+    totals = {"available": 0, "in_progress": 0, "received": 0}
+    for v in views:
+        if v["paid"]:
+            totals["received"] += v["bonus"]
+        elif v["status"] == "in_progress":
+            totals["in_progress"] += v["bonus"]
+        elif v["status"] == "available":
+            totals["available"] += v["bonus"]
+    return totals
+
+
+def is_ajax():
+    return request.headers.get("X-Requested-With") == "fetch"
+
+
+def ajax_response(bank_id):
+    """After a tracking action, hand back just the affected card's HTML plus
+    fresh totals, so the page can patch in place instead of reloading."""
+    banks = effective_banks()
+    banks_by_id = {b["id"]: b for b in banks}
+    state = load_state()
+    if normalize_state(state, banks_by_id):
+        save_state(state)
+    views = [bank_view(b, state) for b in banks]
+    totals = compute_totals(views)
+    bank_view_data = next(v for v in views if v["id"] == bank_id)
+    card_html = render_template(
+        "_card_fragment.html", b=bank_view_data, is_admin=is_admin(), today=today_iso()
+    )
+    return jsonify(card_html=card_html, totals=totals)
+
+
 @app.route("/bonus/login", methods=["GET", "POST"])
 def login():
     error = None
@@ -203,15 +236,7 @@ def index():
 
     views = [bank_view(b, state) for b in banks]
     views.sort(key=lambda v: -v["bonus"])
-
-    totals = {"available": 0, "in_progress": 0, "received": 0}
-    for v in views:
-        if v["paid"]:
-            totals["received"] += v["bonus"]
-        elif v["status"] == "in_progress":
-            totals["in_progress"] += v["bonus"]
-        elif v["status"] == "available":
-            totals["available"] += v["bonus"]
+    totals = compute_totals(views)
 
     return render_template(
         "index.html",
@@ -228,7 +253,10 @@ def edit_page():
         return redirect(url_for("login"))
     banks = effective_banks()
     banks.sort(key=lambda b: b["name"].lower())
-    return render_template("edit.html", banks=banks, custom_ids=custom_bank_ids())
+    overridden_ids = set(load_overrides().keys())
+    return render_template(
+        "edit.html", banks=banks, custom_ids=custom_bank_ids(), overridden_ids=overridden_ids
+    )
 
 
 @app.route("/bonus/api/start/<bank_id>", methods=["POST"])
@@ -246,7 +274,7 @@ def start_bank(bank_id):
         "closed_date": None,
     }
     save_state(state)
-    return redirect(url_for("index"))
+    return ajax_response(bank_id) if is_ajax() else redirect(url_for("index"))
 
 
 @app.route("/bonus/api/started-date/<bank_id>", methods=["POST"])
@@ -265,7 +293,7 @@ def set_started_date(bank_id):
     if st and st.get("status") == "in_progress":
         st["started"] = new_date
         save_state(state)
-    return redirect(url_for("index"))
+    return ajax_response(bank_id) if is_ajax() else redirect(url_for("index"))
 
 
 @app.route("/bonus/api/check/<bank_id>/<int:index>", methods=["POST"])
@@ -283,7 +311,7 @@ def toggle_check(bank_id, index):
         checked[index] = not checked[index]
         st["checked"] = checked
         save_state(state)
-    return redirect(url_for("index"))
+    return ajax_response(bank_id) if is_ajax() else redirect(url_for("index"))
 
 
 @app.route("/bonus/api/paid/<bank_id>", methods=["POST"])
@@ -297,7 +325,7 @@ def toggle_paid(bank_id):
     if st and st.get("status") == "in_progress":
         st["paid"] = not st.get("paid", False)
         save_state(state)
-    return redirect(url_for("index"))
+    return ajax_response(bank_id) if is_ajax() else redirect(url_for("index"))
 
 
 @app.route("/bonus/api/close/<bank_id>", methods=["POST"])
@@ -312,7 +340,7 @@ def close_bank(bank_id):
         st["status"] = "closed"
         st["closed_date"] = today_iso()
         save_state(state)
-    return redirect(url_for("index"))
+    return ajax_response(bank_id) if is_ajax() else redirect(url_for("index"))
 
 
 @app.route("/bonus/api/abandon/<bank_id>", methods=["POST"])
@@ -320,11 +348,13 @@ def abandon_bank(bank_id):
     """Stop tracking a bank that was started by mistake — resets it straight
     back to available with no cooldown, unlike closing it for real."""
     require_admin()
+    if bank_id not in effective_banks_by_id():
+        abort(404)
     state = load_state()
     if bank_id in state and state[bank_id].get("status") == "in_progress":
         del state[bank_id]
         save_state(state)
-    return redirect(url_for("index"))
+    return ajax_response(bank_id) if is_ajax() else redirect(url_for("index"))
 
 
 @app.route("/bonus/api/edit/<bank_id>", methods=["POST"])
@@ -369,7 +399,7 @@ def edit_bank(bank_id):
 
     overrides[bank_id] = entry
     save_overrides(overrides)
-    return redirect(url_for("edit_page"))
+    return redirect(url_for("edit_page", _anchor=bank_id))
 
 
 @app.route("/bonus/api/add", methods=["POST"])
@@ -431,7 +461,7 @@ def add_bank():
     custom_banks = load_custom_banks()
     custom_banks.append(new_bank)
     save_custom_banks(custom_banks)
-    return redirect(url_for("edit_page"))
+    return redirect(url_for("edit_page", _anchor=candidate))
 
 
 @app.route("/bonus/api/delete/<bank_id>", methods=["POST"])

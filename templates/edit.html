@@ -14,11 +14,26 @@
   .btn:hover{background:#000}
   .btn.danger{background:#fff;color:#8a1f1f;border:1px solid #f3aaaa}
   .btn.danger:hover{background:#fde0e0}
+  .btn.danger.confirming{background:#8a1f1f;color:#fff}
 
-  .card{border:1px solid #ddd;border-radius:6px;padding:1rem 1.1rem;margin-bottom:1rem}
-  .card h2{font-size:1rem;margin:0 0 .7rem}
-  .custom-tag{font-size:.68rem;text-transform:uppercase;letter-spacing:.03em;color:#888;background:#f0f0f0;padding:.1rem .4rem;border-radius:3px;margin-left:.5rem;vertical-align:middle}
+  .controls{position:sticky;top:0;background:#fff;padding:.8rem 0;border-bottom:1px solid #ddd;margin-bottom:1rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;z-index:3}
+  .controls input[type=search]{flex:1;min-width:180px;padding:.45rem .6rem;font-size:.88rem;border:1px solid #ccc;border-radius:4px;font-family:inherit}
+  .count{font-size:.78rem;color:#888}
 
+  details.card{border:1px solid #ddd;border-radius:6px;margin-bottom:.7rem;overflow:hidden}
+  details.card summary{padding:.75rem 1rem;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:.6rem;font-size:.95rem}
+  details.card summary::-webkit-details-marker{display:none}
+  details.card summary .name{font-weight:600}
+  details.card summary .meta{display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:#888;white-space:nowrap}
+  details.card[open] summary{border-bottom:1px solid #eee}
+  details.card summary::before{content:"▸";display:inline-block;margin-right:.5rem;color:#999;transition:transform .15s}
+  details.card[open] summary::before{transform:rotate(90deg)}
+
+  .custom-tag,.edited-tag{font-size:.65rem;text-transform:uppercase;letter-spacing:.03em;padding:.1rem .4rem;border-radius:3px}
+  .custom-tag{color:#888;background:#f0f0f0}
+  .edited-tag{color:#7a5c00;background:#fff3cd}
+
+  .form-body{padding:1rem}
   .field{margin-bottom:.55rem}
   .field label{font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;color:#888;display:block;margin-bottom:.15rem}
   .field input[type=text],.field input[type=number],.field textarea,.field select{width:100%;box-sizing:border-box;padding:.4rem .5rem;font-size:.85rem;border:1px solid #ccc;border-radius:4px;font-family:inherit}
@@ -78,9 +93,23 @@
   </form>
 </dialog>
 
+<div class="controls">
+  <input type="search" id="bankSearch" placeholder="Search banks by name…">
+  <span class="count" id="bankCount"></span>
+</div>
+
+<div id="bankList">
 {% for b in banks %}
-<div class="card">
-  <h2>{{ b.name }}{% if b.id in custom_ids %}<span class="custom-tag">custom</span>{% endif %}</h2>
+<details class="card" id="{{ b.id }}" data-name="{{ b.name|lower }}">
+  <summary>
+    <span class="name">{{ b.name }}</span>
+    <span class="meta">
+      ${{ "{:,}".format(b.bonus) }}
+      {% if b.id in custom_ids %}<span class="custom-tag">custom</span>{% endif %}
+      {% if b.id in overridden_ids %}<span class="edited-tag">edited</span>{% endif %}
+    </span>
+  </summary>
+  <div class="form-body">
   <form method="post" action="{{ url_for('edit_bank', bank_id=b.id) }}">
     <div class="grid2">
       <div class="field"><label>Name</label><input type="text" name="name" value="{{ b.name }}"></div>
@@ -110,12 +139,66 @@
       <button type="submit" class="btn">Save changes</button>
       {% if b.id in custom_ids %}
       <button type="submit" formaction="{{ url_for('delete_bank', bank_id=b.id) }}" formnovalidate class="btn danger"
-        onclick='return confirm("Delete " + {{ b.name|tojson }} + "? This removes it and any tracked progress.")'>Delete</button>
+        data-confirm="Delete {{ b.name }}? This removes it and any tracked progress.">Delete</button>
       {% endif %}
     </div>
   </form>
-</div>
+  </div>
+</details>
 {% endfor %}
+</div>
+
+<script>
+(function(){
+  var search = document.getElementById('bankSearch');
+  var list = document.getElementById('bankList');
+  var items = Array.prototype.slice.call(list.querySelectorAll('details.card'));
+  var countEl = document.getElementById('bankCount');
+
+  function updateCount(){
+    var visible = items.filter(function(el){ return el.style.display !== 'none'; }).length;
+    countEl.textContent = visible + ' of ' + items.length;
+  }
+
+  search.addEventListener('input', function(){
+    var q = search.value.trim().toLowerCase();
+    items.forEach(function(el){
+      el.style.display = (!q || el.dataset.name.indexOf(q) !== -1) ? '' : 'none';
+    });
+    updateCount();
+  });
+
+  // Destructive actions (Delete) arm on first click instead of a native
+  // confirm() — click again within a few seconds to go through.
+  list.addEventListener('click', function(event){
+    var btn = event.target.closest('button[data-confirm]');
+    if (!btn) return;
+    if (btn.dataset.armed === '1') return;
+    event.preventDefault();
+    btn.dataset.armed = '1';
+    btn.dataset.originalText = btn.textContent;
+    btn.textContent = 'Click again to confirm';
+    btn.classList.add('confirming');
+    clearTimeout(btn._confirmTimer);
+    btn._confirmTimer = setTimeout(function(){
+      btn.dataset.armed = '0';
+      btn.textContent = btn.dataset.originalText;
+      btn.classList.remove('confirming');
+    }, 3000);
+  });
+
+  // Jump-to-anchor after a save: open that entry and scroll to it.
+  if (window.location.hash) {
+    var target = document.getElementById(window.location.hash.slice(1));
+    if (target && target.tagName === 'DETAILS') {
+      target.open = true;
+      setTimeout(function(){ target.scrollIntoView({block: 'center'}); }, 0);
+    }
+  }
+
+  updateCount();
+})();
+</script>
 
 </body>
 </html>

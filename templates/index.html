@@ -7,7 +7,8 @@
 <style>
   body{font-family:system-ui,-apple-system,sans-serif;color:#222;background:#fff;max-width:960px;margin:0 auto 3rem;padding:0 1rem;line-height:1.45}
   h1{font-size:1.3rem;margin-bottom:.2rem}
-  .sub{color:#666;font-size:.85rem;margin-bottom:1rem}
+  .sub{color:#666;font-size:.85rem;margin-bottom:.6rem}
+  .note-line{color:#888;font-size:.8rem;margin-bottom:1rem}
   .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap}
   .authlink{font-size:.8rem;color:#666;white-space:nowrap;display:flex;gap:.75rem;align-items:center}
   .authlink form{display:inline}
@@ -16,16 +17,25 @@
 
   .stats{position:sticky;top:0;z-index:5;background:#fff;border-bottom:2px solid #222;padding:.9rem 0 .6rem;margin-bottom:.9rem;display:flex;gap:1.25rem;flex-wrap:wrap}
   .stat .label{font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:#666}
-  .stat .amount{font-size:1.5rem;font-weight:700;line-height:1.2}
+  .stat .amount{font-size:1.5rem;font-weight:700;line-height:1.2;transition:color .3s}
+
+  .legend{display:flex;gap:1rem;flex-wrap:wrap;font-size:.75rem;color:#666;margin-bottom:.9rem}
+  .legend .dot{display:inline-block;width:.6rem;height:.6rem;border-radius:50%;margin-right:.35rem;vertical-align:middle}
+  .legend .dot.required{background:#c94f4f}
+  .legend .dot.advisory{background:#e0ab1f}
+  .legend .dot.not_required{background:#3f9350}
 
   .toolbar{position:sticky;top:0;z-index:4;background:#fff;border-bottom:1px solid #ddd;padding:.6rem 0;margin-bottom:1rem;display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end}
   .toolbar div{display:flex;flex-direction:column;gap:.2rem}
   .toolbar label{font-size:.68rem;text-transform:uppercase;letter-spacing:.03em;color:#888}
   .toolbar select{font-size:.82rem;padding:.3rem .4rem;border:1px solid #ccc;border-radius:4px;font-family:inherit}
 
-  .card{border:1px solid #ddd;border-radius:6px;padding:1rem 1.1rem;margin-bottom:.9rem}
-  .card.st-closed{background:#f7f7f7}
+  .card{border:1px solid #ddd;border-left:4px solid #d8dde6;border-radius:6px;padding:1rem 1.1rem;margin-bottom:.9rem;transition:box-shadow .2s}
+  .card.st-available{border-left-color:#aab6e0}
+  .card.st-progress{border-left-color:#e0ab1f;background:#fffdf5}
+  .card.st-closed{background:#f7f7f7;border-left-color:#ccc}
   .card.st-closed .detail,.card.st-closed .subtitle{color:#aaa}
+  .card.just-updated{box-shadow:0 0 0 2px #b7c1e6}
   .card-head{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;flex-wrap:wrap}
   .card-head h2{font-size:1.05rem;margin:0}
   .card.st-closed h2{color:#999}
@@ -33,10 +43,16 @@
   .card.st-closed .amount{color:#aaa}
   .subtitle{color:#666;font-size:.82rem;margin-top:.1rem}
 
-  .badge{display:inline-block;font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;padding:.15rem .5rem;border-radius:3px;margin-top:.4rem}
+  .tag-row{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;margin-top:.4rem}
+  .badge{display:inline-block;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:.2rem .55rem;border-radius:3px}
   .badge.available{background:#eef1ff;color:#3a4a99}
   .badge.in_progress{background:#fff3cd;color:#7a5c00}
   .badge.closed{background:#eee;color:#888}
+
+  .balance-tag{display:inline-flex;align-items:center;font-size:.7rem;font-weight:600;padding:.18rem .55rem;border-radius:12px;cursor:help}
+  .balance-tag.required{background:#fde0e0;color:#8a1f1f}
+  .balance-tag.advisory{background:#fff3cd;color:#7a5c00}
+  .balance-tag.not_required{background:#e3f4e6;color:#1e5e2f}
 
   .detail{font-size:.85rem;color:#555;margin-top:.55rem}
   .detail b{color:#333}
@@ -50,23 +66,32 @@
   .closure-badge.pending{background:#fff3cd;border:1px solid #ffe08a;color:#7a5c00}
   .closure-badge.ready{background:#d4edda;border:1px solid #a3d9ae;color:#1e5e2f}
 
-  .balance-badge{margin-top:.6rem;padding:.5rem .75rem;border-radius:5px;font-weight:600;font-size:.85rem}
-  .balance-badge.required{background:#fde0e0;border:1px solid #f3aaaa;color:#8a1f1f}
-  .balance-badge.advisory{background:#fff3cd;border:1px solid #ffe08a;color:#7a5c00}
-  .balance-badge.not_required{background:#e3f4e6;border:1px solid #aedcb6;color:#1e5e2f}
-
-  .row-actions{margin-top:.7rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+  .row-actions{margin-top:.7rem;display:flex;gap:.9rem;align-items:center;flex-wrap:wrap}
   .btn{padding:.45rem .9rem;font-size:.85rem;border:none;border-radius:4px;background:#222;color:#fff;cursor:pointer}
   .btn:hover{background:#000}
-  .btn.secondary{background:#fff;color:#444;border:1px solid #ccc}
-  .btn.secondary:hover{background:#f5f5f5}
+  .btn.linklike{background:none;color:#999;padding:.45rem .2rem;text-decoration:underline}
+  .btn.linklike:hover{color:#666;background:none}
 
   .started-row{display:flex;align-items:center;gap:.5rem;font-size:.85rem;color:#555;margin-top:.6rem}
   .started-row input[type=date]{padding:.25rem .35rem;font-size:.85rem;border:1px solid #ccc;border-radius:3px}
 
-  .paid-row{margin-top:.5rem;font-size:.88rem;display:flex;align-items:center;gap:.5rem}
+  .paid-row{margin-top:.7rem;padding-top:.6rem;border-top:1px dashed #ddd}
+  .toggle-label{display:flex;align-items:center;gap:.55rem;cursor:pointer;font-size:.88rem;color:#555}
+  .paid-row.is-paid .toggle-label{color:#1e5e2f;font-weight:600}
+  .toggle-switch{position:relative;display:inline-block;width:34px;height:19px;flex-shrink:0}
+  .toggle-switch input{opacity:0;width:0;height:0}
+  .toggle-track{position:absolute;inset:0;background:#ccc;border-radius:19px;transition:background .2s}
+  .toggle-track::before{content:"";position:absolute;height:13px;width:13px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s}
+  .toggle-switch input:checked + .toggle-track{background:#3f9350}
+  .toggle-switch input:checked + .toggle-track::before{transform:translateX(15px)}
 
   .cooldown-info{margin-top:.5rem;font-size:.85rem;color:#888}
+
+  .btn.confirming{background:#8a1f1f;color:#fff}
+  .btn.linklike.confirming{color:#8a1f1f;font-weight:600;text-decoration:none}
+
+  .toast{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:.6rem 1.1rem;border-radius:6px;font-size:.85rem;box-shadow:0 4px 16px rgba(0,0,0,.25);z-index:20;max-width:90vw}
+  .toast[hidden]{display:none}
 
   @media (max-width:600px){
     .card-head{flex-direction:column;gap:.15rem}
@@ -87,11 +112,18 @@
   {% endif %}
 </div>
 <p class="sub">Comprehensive pass verified July 29, 2026 — {{ banks|length }} offers. Click a bank to start tracking it; check off requirements as you complete them; the account is safe to close once its closure date passes, and it greys out on a cooldown timer until you're eligible again. Sources: Doctor of Credit and the banks' own offer and fee pages. Bonuses are taxable (1099-INT).</p>
+<p class="note-line">This is a personal live tracker — anyone with the link can browse it; only the logged-in admin can start, check off, or close anything.</p>
 
 <div class="stats">
-  <div class="stat"><div class="label">Available</div><div class="amount">${{ "{:,}".format(totals.available) }}</div></div>
-  <div class="stat"><div class="label">In progress</div><div class="amount">${{ "{:,}".format(totals.in_progress) }}</div></div>
-  <div class="stat"><div class="label">Received</div><div class="amount">${{ "{:,}".format(totals.received) }}</div></div>
+  <div class="stat"><div class="label">Available</div><div class="amount" data-stat="available">${{ "{:,}".format(totals.available) }}</div></div>
+  <div class="stat"><div class="label">In progress</div><div class="amount" data-stat="in_progress">${{ "{:,}".format(totals.in_progress) }}</div></div>
+  <div class="stat"><div class="label">Received</div><div class="amount" data-stat="received">${{ "{:,}".format(totals.received) }}</div></div>
+</div>
+
+<div class="legend">
+  <span><span class="dot required"></span>Balance must stay in the account</span>
+  <span><span class="dot advisory"></span>No balance required, but a caveat applies</span>
+  <span><span class="dot not_required"></span>No balance required</span>
 </div>
 
 <div class="toolbar">
@@ -122,112 +154,18 @@
   </div>
 </div>
 
+{% from '_card.html' import render_card %}
 <div id="cardList">
 {% for b in banks %}
-<div class="card st-{{ 'closed' if b.status == 'closed' else ('progress' if b.status == 'in_progress' else 'available') }}"
-     data-bonus="{{ b.bonus }}" data-name="{{ b.name }}" data-status="{{ b.status }}"
-     data-paid="{{ 'true' if b.paid else 'false' }}" data-balance="{{ b.balance_status }}">
-  <div class="card-head">
-    <div>
-      <h2>{{ b.name }}</h2>
-      <div class="subtitle">{{ b.subtitle }}</div>
-      {% if b.status == 'available' %}
-        <span class="badge available">Available</span>
-      {% elif b.status == 'in_progress' %}
-        <span class="badge in_progress">{{ 'Paid — awaiting closure' if b.paid else 'In progress' }}</span>
-      {% else %}
-        <span class="badge closed">Cooldown</span>
-      {% endif %}
-    </div>
-    <div class="amount">${{ "{:,}".format(b.bonus) }}</div>
-  </div>
-
-  <div class="balance-badge {{ b.balance_status }}">
-    {% if b.balance_status == 'required' %}&#9888; Balance must stay in{% elif b.balance_status == 'advisory' %}&#9679; No balance required, but{% else %}&#10003; No balance required{% endif %}
-    — {{ b.balance_note }}
-  </div>
-
-  <div class="detail"><b>Requirement:</b> {{ b.requirement }}</div>
-  <div class="detail"><b>Monthly fee:</b> {{ b.monthly_fee }}</div>
-  <div class="detail"><b>Exit:</b> {{ b.exit_text }}</div>
-  <div class="detail"><b>Cooldown:</b> {{ b.cooldown_text }}</div>
-
-  {% if b.status == 'available' %}
-    {% if is_admin %}
-    <form method="post" action="{{ url_for('start_bank', bank_id=b.id) }}">
-      <button type="submit" class="btn">Start tracking</button>
-    </form>
-    {% endif %}
-
-  {% elif b.status == 'in_progress' %}
-    <div class="started-row">
-      Started
-      {% if is_admin %}
-      <form method="post" action="{{ url_for('set_started_date', bank_id=b.id) }}">
-        <input type="date" name="started" value="{{ b.started }}" max="{{ today }}" onchange="this.form.submit()">
-      </form>
-      {% else %}
-        <strong>{{ b.started }}</strong>
-      {% endif %}
-    </div>
-
-    <div class="checklist">
-      {% for item in b.checklist %}
-        {% set checked = b.checked[loop.index0] %}
-        <label class="{{ 'checked' if checked else '' }}">
-          {% if is_admin %}
-          <form method="post" action="{{ url_for('toggle_check', bank_id=b.id, index=loop.index0) }}">
-            <input type="checkbox" onchange="this.form.submit()" {{ 'checked' if checked else '' }}>
-          </form>
-          {% else %}
-          <input type="checkbox" disabled {{ 'checked' if checked else '' }}>
-          {% endif %}
-          {{ item }}
-        </label>
-      {% endfor %}
-    </div>
-
-    <div class="paid-row">
-      {% if is_admin %}
-      <form method="post" action="{{ url_for('toggle_paid', bank_id=b.id) }}">
-        <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-          <input type="checkbox" onchange="this.form.submit()" {{ 'checked' if b.paid else '' }}> Payment received
-        </label>
-      </form>
-      {% else %}
-        <label style="display:flex;align-items:center;gap:.5rem"><input type="checkbox" disabled {{ 'checked' if b.paid else '' }}> Payment received</label>
-      {% endif %}
-    </div>
-
-    {% if b.can_close %}
-      <div class="closure-badge ready">Safe to close — eligible since {{ b.safe_close_date }}</div>
-    {% else %}
-      <div class="closure-badge pending">Safe to close on {{ b.safe_close_date }} (you can still close it early below if you've already wrapped it up)</div>
-    {% endif %}
-    {% if is_admin %}
-    <div class="row-actions">
-      <form method="post" action="{{ url_for('close_bank', bank_id=b.id) }}">
-        <button type="submit" class="btn">Close account</button>
-      </form>
-      <form method="post" action="{{ url_for('abandon_bank', bank_id=b.id) }}" onsubmit='return confirm("Stop tracking " + {{ b.name|tojson }} + "? This discards its progress without starting a cooldown.")'>
-        <button type="submit" class="btn secondary">Stop tracking</button>
-      </form>
-    </div>
-    {% endif %}
-
-  {% else %}
-    <div class="cooldown-info">
-      Closed {{ b.closed_date }}{% if b.eligible_again %} — eligible again {{ b.eligible_again }}{% else %} — one-time bonus, not eligible again{% endif %}
-    </div>
-  {% endif %}
-</div>
+{{ render_card(b, is_admin, today) }}
 {% endfor %}
 </div>
+
+<div id="toast" class="toast" hidden></div>
 
 <script>
 (function(){
   var list = document.getElementById('cardList');
-  var cards = Array.prototype.slice.call(list.querySelectorAll('.card'));
   var sortSelect = document.getElementById('sortSelect');
   var statusFilter = document.getElementById('statusFilter');
   var balanceFilter = document.getElementById('balanceFilter');
@@ -244,12 +182,13 @@
   }
 
   function apply(){
+    var cards = Array.prototype.slice.call(list.querySelectorAll('.card'));
     var sortBy = sortSelect.value;
-    var sorted = cards.slice().sort(function(a, b){
+    cards.sort(function(a, b){
       if (sortBy === 'name') return a.dataset.name.localeCompare(b.dataset.name);
       return parseInt(b.dataset.bonus, 10) - parseInt(a.dataset.bonus, 10);
     });
-    sorted.forEach(function(card){
+    cards.forEach(function(card){
       card.style.display = matches(card) ? '' : 'none';
       list.appendChild(card);
     });
@@ -259,6 +198,75 @@
   statusFilter.addEventListener('change', apply);
   balanceFilter.addEventListener('change', apply);
   apply();
+
+  function updateTotals(totals){
+    Object.keys(totals).forEach(function(key){
+      var el = document.querySelector('[data-stat="' + key + '"]');
+      if (el) el.textContent = '$' + totals[key].toLocaleString();
+    });
+  }
+
+  var toast = document.getElementById('toast');
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.hidden = false;
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(function(){ toast.hidden = true; }, 4000);
+  }
+
+  // Destructive actions (Stop tracking) arm on first click instead of
+  // popping a native confirm() — click again within a few seconds to go
+  // through, or let it time out to back off.
+  list.addEventListener('click', function(event){
+    var btn = event.target.closest('button[data-confirm]');
+    if (!btn) return;
+    if (btn.dataset.armed === '1') return; // second click: let it submit
+    event.preventDefault();
+    btn.dataset.armed = '1';
+    btn.dataset.originalText = btn.textContent;
+    btn.textContent = 'Click again to confirm';
+    btn.classList.add('confirming');
+    clearTimeout(btn._confirmTimer);
+    btn._confirmTimer = setTimeout(function(){
+      btn.dataset.armed = '0';
+      btn.textContent = btn.dataset.originalText;
+      btn.classList.remove('confirming');
+    }, 3000);
+  });
+
+  // Intercept every form inside a card and submit it via fetch, swapping in
+  // just the returned card HTML instead of reloading the whole page — keeps
+  // your scroll position and the sort/filter state intact.
+  list.addEventListener('submit', function(event){
+    var form = event.target;
+    if (!form.classList.contains('js-action')) return;
+    event.preventDefault();
+
+    var card = form.closest('.card');
+
+    fetch(form.action, {
+      method: 'POST',
+      body: new FormData(form),
+      headers: {'X-Requested-With': 'fetch'}
+    }).then(function(resp){
+      if (!resp.ok) throw new Error('Request failed: ' + resp.status);
+      return resp.json();
+    }).then(function(data){
+      updateTotals(data.totals);
+      var wrapper = document.createElement('div');
+      wrapper.innerHTML = data.card_html.trim();
+      var newCard = wrapper.firstElementChild;
+      if (card && newCard) {
+        card.replaceWith(newCard);
+        newCard.classList.add('just-updated');
+        setTimeout(function(){ newCard.classList.remove('just-updated'); }, 900);
+      }
+      apply();
+    }).catch(function(err){
+      console.error(err);
+      showToast('Something went wrong saving that — try again.');
+    });
+  });
 })();
 </script>
 
