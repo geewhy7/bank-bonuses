@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manage banks — Bank Bonuses</title>
+<style>
+  body{font-family:system-ui,-apple-system,sans-serif;color:#222;background:#fff;max-width:820px;margin:0 auto 3rem;padding:0 1rem;line-height:1.45}
+  h1{font-size:1.3rem;margin:1.2rem 0 .2rem}
+  .sub{color:#666;font-size:.85rem;margin-bottom:1rem}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}
+  .topbar a{font-size:.85rem;color:#666}
+  .btn{padding:.5rem 1rem;font-size:.85rem;border:none;border-radius:4px;background:#222;color:#fff;cursor:pointer}
+  .btn:hover{background:#000}
+  .btn.danger{background:#fff;color:#8a1f1f;border:1px solid #f3aaaa}
+  .btn.danger:hover{background:#fde0e0}
+
+  .card{border:1px solid #ddd;border-radius:6px;padding:1rem 1.1rem;margin-bottom:1rem}
+  .card h2{font-size:1rem;margin:0 0 .7rem}
+  .custom-tag{font-size:.68rem;text-transform:uppercase;letter-spacing:.03em;color:#888;background:#f0f0f0;padding:.1rem .4rem;border-radius:3px;margin-left:.5rem;vertical-align:middle}
+
+  .field{margin-bottom:.55rem}
+  .field label{font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;color:#888;display:block;margin-bottom:.15rem}
+  .field input[type=text],.field input[type=number],.field textarea,.field select{width:100%;box-sizing:border-box;padding:.4rem .5rem;font-size:.85rem;border:1px solid #ccc;border-radius:4px;font-family:inherit}
+  .field textarea{min-height:3.2em;resize:vertical}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+  .form-actions{margin-top:.7rem;display:flex;justify-content:space-between;align-items:center}
+
+  dialog{border:1px solid #ccc;border-radius:8px;padding:1.2rem;max-width:480px;width:90vw}
+  dialog::backdrop{background:rgba(0,0,0,.4)}
+  dialog h2{font-size:1.05rem;margin:0 0 .8rem}
+  .dialog-actions{margin-top:.8rem;display:flex;justify-content:flex-end;gap:.6rem}
+
+  @media (max-width:600px){
+    .grid2{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Manage banks</h1>
+  <a href="{{ url_for('index') }}">&larr; back to tracker</a>
+</div>
+<p class="sub">Edit any field on any bank — changes save to a local override layer, separate from the shipped catalog. Blank a field and save to revert it to the default. Add entirely new banks below.</p>
+
+<button class="btn" onclick="document.getElementById('addDialog').showModal()">+ Add bank</button>
+
+<dialog id="addDialog">
+  <form method="post" action="{{ url_for('add_bank') }}">
+    <h2>Add a bank</h2>
+    <div class="field"><label>Name</label><input type="text" name="name" required autofocus></div>
+    <div class="field"><label>Subtitle</label><input type="text" name="subtitle" placeholder="Account name, promo code, expiration"></div>
+    <div class="grid2">
+      <div class="field"><label>Bonus ($)</label><input type="number" name="bonus" value="0"></div>
+      <div class="field"><label>Balance status</label>
+        <select name="balance_status">
+          <option value="not_required">Not required</option>
+          <option value="advisory">Advisory</option>
+          <option value="required">Required</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Requirement</label><textarea name="requirement"></textarea></div>
+    <div class="field"><label>Checklist (one step per line)</label><textarea name="checklist"></textarea></div>
+    <div class="field"><label>Monthly fee</label><textarea name="monthly_fee"></textarea></div>
+    <div class="field"><label>Exit</label><textarea name="exit_text"></textarea></div>
+    <div class="field"><label>Cooldown</label><textarea name="cooldown_text"></textarea></div>
+    <div class="field"><label>Balance note</label><input type="text" name="balance_note"></div>
+    <div class="grid2">
+      <div class="field"><label>Hold days (to closure date)</label><input type="number" name="hold_days" value="90"></div>
+      <div class="field"><label>Cooldown days ("never" = one-time)</label><input type="text" name="cooldown_days" value="365"></div>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn danger" onclick="document.getElementById('addDialog').close()">Cancel</button>
+      <button type="submit" class="btn">Add bank</button>
+    </div>
+  </form>
+</dialog>
+
+{% for b in banks %}
+<div class="card">
+  <h2>{{ b.name }}{% if b.id in custom_ids %}<span class="custom-tag">custom</span>{% endif %}</h2>
+  <form method="post" action="{{ url_for('edit_bank', bank_id=b.id) }}">
+    <div class="grid2">
+      <div class="field"><label>Name</label><input type="text" name="name" value="{{ b.name }}"></div>
+      <div class="field"><label>Bonus ($)</label><input type="number" name="bonus" value="{{ b.bonus }}"></div>
+    </div>
+    <div class="field"><label>Subtitle</label><input type="text" name="subtitle" value="{{ b.subtitle }}"></div>
+    <div class="field"><label>Requirement</label><textarea name="requirement">{{ b.requirement }}</textarea></div>
+    <div class="field"><label>Checklist (one step per line)</label><textarea name="checklist">{{ b.checklist|join('\n') }}</textarea></div>
+    <div class="field"><label>Monthly fee</label><textarea name="monthly_fee">{{ b.monthly_fee }}</textarea></div>
+    <div class="field"><label>Exit</label><textarea name="exit_text">{{ b.exit_text }}</textarea></div>
+    <div class="field"><label>Cooldown</label><textarea name="cooldown_text">{{ b.cooldown_text }}</textarea></div>
+    <div class="grid2">
+      <div class="field"><label>Balance status</label>
+        <select name="balance_status">
+          <option value="required" {{ 'selected' if b.balance_status == 'required' }}>Required</option>
+          <option value="advisory" {{ 'selected' if b.balance_status == 'advisory' }}>Advisory</option>
+          <option value="not_required" {{ 'selected' if b.balance_status == 'not_required' }}>Not required</option>
+        </select>
+      </div>
+      <div class="field"><label>Balance note</label><input type="text" name="balance_note" value="{{ b.balance_note }}"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Hold days (to closure date)</label><input type="number" name="hold_days" value="{{ b.hold_days }}"></div>
+      <div class="field"><label>Cooldown days ("never" = one-time)</label><input type="text" name="cooldown_days" value="{{ b.cooldown_days if b.cooldown_days is not none else 'never' }}"></div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn">Save changes</button>
+      {% if b.id in custom_ids %}
+      <button type="submit" formaction="{{ url_for('delete_bank', bank_id=b.id) }}" formnovalidate class="btn danger"
+        onclick='return confirm("Delete " + {{ b.name|tojson }} + "? This removes it and any tracked progress.")'>Delete</button>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endfor %}
+
+</body>
+</html>

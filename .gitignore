@@ -5,4 +5,5 @@ __pycache__/
 .env
 data/state.json
 data/overrides.json
+data/custom_banks.json
 data/secret_key
