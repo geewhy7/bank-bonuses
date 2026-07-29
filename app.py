@@ -15,11 +15,25 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
 STATE_FILE = DATA_DIR / "state.json"
+OVERRIDES_FILE = DATA_DIR / "overrides.json"
 SECRET_KEY_FILE = DATA_DIR / "secret_key"
 
 BANKS_BY_ID = {b["id"]: b for b in BANKS}
 
 ADMIN_PASSWORD = os.environ.get("BONUS_ADMIN_PASSWORD")
+
+EDITABLE_FIELDS = [
+    "subtitle",
+    "bonus",
+    "requirement",
+    "monthly_fee",
+    "exit_text",
+    "cooldown_text",
+    "balance_status",
+    "balance_note",
+    "hold_days",
+    "cooldown_days",
+]
 
 
 def get_secret_key():
@@ -45,6 +59,27 @@ def save_state(state):
     STATE_FILE.write_text(json.dumps(state, indent=2))
 
 
+def load_overrides():
+    if OVERRIDES_FILE.exists():
+        return json.loads(OVERRIDES_FILE.read_text())
+    return {}
+
+
+def save_overrides(overrides):
+    OVERRIDES_FILE.write_text(json.dumps(overrides, indent=2))
+
+
+def effective_banks():
+    """BANKS merged with any saved per-field overrides."""
+    overrides = load_overrides()
+    out = []
+    for b in BANKS:
+        merged = dict(b)
+        merged.update(overrides.get(b["id"], {}))
+        out.append(merged)
+    return out
+
+
 def is_admin():
     return bool(session.get("admin"))
 
@@ -58,12 +93,12 @@ def today_iso():
     return date.today().isoformat()
 
 
-def normalize_state(state):
+def normalize_state(state, banks_by_id):
     """Flip any bank whose cooldown has elapsed back to available. Returns
     True if the state dict was changed (caller should persist it)."""
     changed = False
     for bank_id, st in state.items():
-        bank = BANKS_BY_ID.get(bank_id)
+        bank = banks_by_id.get(bank_id)
         if not bank or st.get("status") != "closed":
             continue
         cooldown_days = bank["cooldown_days"]
@@ -140,11 +175,13 @@ def logout():
 @app.route("/bonus")
 @app.route("/bonus/")
 def index():
+    banks = effective_banks()
+    banks_by_id = {b["id"]: b for b in banks}
     state = load_state()
-    if normalize_state(state):
+    if normalize_state(state, banks_by_id):
         save_state(state)
 
-    views = [bank_view(b, state) for b in BANKS]
+    views = [bank_view(b, state) for b in banks]
     views.sort(key=lambda v: (v["sort_priority"], -v["bonus"]))
 
     totals = {"available": 0, "in_progress": 0, "received": 0, "cooldown": 0}
@@ -248,6 +285,46 @@ def close_bank(bank_id):
         st["status"] = "closed"
         st["closed_date"] = today_iso()
         save_state(state)
+    return redirect(url_for("index"))
+
+
+@app.route("/bonus/api/edit/<bank_id>", methods=["POST"])
+def edit_bank(bank_id):
+    require_admin()
+    if bank_id not in BANKS_BY_ID:
+        abort(404)
+
+    overrides = load_overrides()
+    entry = {}
+
+    for field in ("subtitle", "requirement", "monthly_fee", "exit_text", "cooldown_text", "balance_note"):
+        value = request.form.get(field, "").strip()
+        if value:
+            entry[field] = value
+
+    balance_status = request.form.get("balance_status", "")
+    if balance_status in ("required", "advisory", "not_required"):
+        entry["balance_status"] = balance_status
+
+    for field in ("bonus", "hold_days"):
+        value = request.form.get(field, "").strip()
+        if value:
+            try:
+                entry[field] = int(value)
+            except ValueError:
+                abort(400)
+
+    cooldown_days = request.form.get("cooldown_days", "").strip()
+    if cooldown_days.lower() in ("never", "none"):
+        entry["cooldown_days"] = None
+    elif cooldown_days:
+        try:
+            entry["cooldown_days"] = int(cooldown_days)
+        except ValueError:
+            abort(400)
+
+    overrides[bank_id] = entry
+    save_overrides(overrides)
     return redirect(url_for("index"))
 
 

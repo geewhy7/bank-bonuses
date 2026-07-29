@@ -39,6 +39,14 @@ Your personal progress (which bonuses you've started, checked off, or closed)
 lives in `data/state.json`, created automatically on first run and never
 committed to git — it's just you.
 
+You can also edit any bank's details straight from the page (as admin) via
+the "Edit details" disclosure on its card — subtitle, requirement, fees,
+exit terms, cooldown text, the balance-requirement badge, and the two
+numbers that drive the date math (`hold_days`, `cooldown_days`). Those edits
+are saved to `data/overrides.json` (also gitignored) layered on top of
+`banks.py`, so pulling catalog updates from upstream won't clobber your
+tweaks. Leave a field blank and save to revert it to the `banks.py` default.
+
 ## Data
 
 The included offers were researched against Doctor of Credit and each bank's
