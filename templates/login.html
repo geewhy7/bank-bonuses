@@ -5,16 +5,38 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Log in — Bank Bonuses</title>
 <style>
-  body{font-family:system-ui,-apple-system,sans-serif;color:#222;background:#fff;max-width:360px;margin:4rem auto;padding:0 1rem;line-height:1.45}
-  h1{font-size:1.1rem;margin-bottom:1rem}
-  input[type=password]{width:100%;box-sizing:border-box;padding:.55rem .65rem;font-size:1rem;border:1px solid #ccc;border-radius:4px;margin-bottom:.75rem}
-  button{width:100%;padding:.6rem;font-size:1rem;background:#222;color:#fff;border:none;border-radius:4px;cursor:pointer}
-  button:hover{background:#000}
-  .error{color:#b00020;font-size:.85rem;margin-bottom:.75rem}
-  a{color:#666;font-size:.85rem}
+  :root{
+    --bg:#f7f7f9; --surface:#fff; --border:rgba(20,20,30,.09);
+    --text:#18181b; --text-muted:#64646d;
+    --accent:#4f46e5; --accent-hover:#4338ca;
+    --danger:#b91c1c; --danger-soft:#fdecec;
+    --shadow-md:0 6px 20px rgba(20,20,30,.07),0 1px 3px rgba(20,20,30,.05);
+    --radius:14px; --radius-sm:9px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0c0c10; --surface:#18181f; --border:rgba(255,255,255,.09);
+      --text:#f2f2f5; --text-muted:#9d9da8;
+      --accent:#8583f5; --accent-hover:#a5a3ff;
+      --danger:#f2726a; --danger-soft:rgba(242,114,106,.12);
+      --shadow-md:0 8px 24px rgba(0,0,0,.45),0 1px 3px rgba(0,0,0,.3);
+    }
+  }
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;color:var(--text);background:var(--bg);min-height:100vh;margin:0;display:flex;align-items:center;justify-content:center;-webkit-font-smoothing:antialiased}
+  .panel{background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-md);border-radius:var(--radius);padding:2rem 2.1rem;width:100%;max-width:320px}
+  h1{font-size:1.15rem;font-weight:800;letter-spacing:-.01em;margin:0 0 1.1rem}
+  input[type=password]{width:100%;box-sizing:border-box;padding:.6rem .7rem;font-size:1rem;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:.85rem;background:var(--bg);color:var(--text);font-family:inherit}
+  button{width:100%;padding:.65rem;font-size:.95rem;font-weight:600;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;transition:background .15s;font-family:inherit}
+  button:hover{background:var(--accent-hover)}
+  .error{color:var(--danger);background:var(--danger-soft);padding:.55rem .7rem;border-radius:var(--radius-sm);font-size:.83rem;margin-bottom:.85rem}
+  a{color:var(--text-muted);font-size:.83rem;text-decoration:none}
+  a:hover{color:var(--text)}
+  p{margin:1rem 0 0}
 </style>
 </head>
 <body>
+<div class="panel">
 <h1>Admin login</h1>
 {% if error %}<div class="error">{{ error }}</div>{% endif %}
 <form method="post">
@@ -22,5 +44,6 @@
   <button type="submit">Log in</button>
 </form>
 <p><a href="{{ url_for('index') }}">&larr; back to the list</a></p>
+</div>
 </body>
 </html>

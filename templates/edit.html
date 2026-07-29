@@ -5,46 +5,69 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Manage banks — Bank Bonuses</title>
 <style>
-  body{font-family:system-ui,-apple-system,sans-serif;color:#222;background:#fff;max-width:820px;margin:0 auto 3rem;padding:0 1rem;line-height:1.45}
-  h1{font-size:1.3rem;margin:1.2rem 0 .2rem}
-  .sub{color:#666;font-size:.85rem;margin-bottom:1rem}
-  .topbar{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}
-  .topbar a{font-size:.85rem;color:#666}
-  .btn{padding:.5rem 1rem;font-size:.85rem;border:none;border-radius:4px;background:#222;color:#fff;cursor:pointer}
-  .btn:hover{background:#000}
-  .btn.danger{background:#fff;color:#8a1f1f;border:1px solid #f3aaaa}
-  .btn.danger:hover{background:#fde0e0}
-  .btn.danger.confirming{background:#8a1f1f;color:#fff}
+  :root{
+    --bg:#f7f7f9; --surface:#fff;
+    --border:rgba(20,20,30,.09); --text:#18181b; --text-muted:#64646d; --text-faint:#9a9aa2;
+    --accent:#4f46e5; --accent-hover:#4338ca; --accent-soft:#eef0fe;
+    --danger:#b91c1c; --danger-soft:#fdecec;
+    --warning:#b45309; --warning-soft:#fff6e6;
+    --shadow-sm:0 1px 2px rgba(20,20,30,.05);
+    --shadow-md:0 6px 20px rgba(20,20,30,.07),0 1px 3px rgba(20,20,30,.05);
+    --radius:14px; --radius-sm:9px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0c0c10; --surface:#18181f;
+      --border:rgba(255,255,255,.09); --text:#f2f2f5; --text-muted:#9d9da8; --text-faint:#6c6c78;
+      --accent:#8583f5; --accent-hover:#a5a3ff; --accent-soft:rgba(133,131,245,.14);
+      --danger:#f2726a; --danger-soft:rgba(242,114,106,.12);
+      --warning:#f0ab3e; --warning-soft:rgba(240,171,62,.12);
+      --shadow-sm:0 1px 2px rgba(0,0,0,.35); --shadow-md:0 8px 24px rgba(0,0,0,.45),0 1px 3px rgba(0,0,0,.3);
+    }
+  }
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;color:var(--text);background:var(--bg);max-width:760px;margin:0 auto 4rem;padding:0 1.1rem;line-height:1.55;font-size:15.5px;-webkit-font-smoothing:antialiased}
+  h1{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin:1.6rem 0 .2rem}
+  .sub{color:var(--text-muted);font-size:.87rem;margin-bottom:1.1rem;max-width:65ch}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:.2rem}
+  .topbar a{font-size:.85rem;color:var(--text-muted);text-decoration:none}
+  .topbar a:hover{color:var(--text)}
+  .btn{padding:.55rem 1.1rem;font-size:.85rem;font-weight:600;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#fff;cursor:pointer;box-shadow:var(--shadow-sm);transition:background .15s,transform .1s,box-shadow .15s;font-family:inherit}
+  .btn:hover{background:var(--accent-hover);box-shadow:var(--shadow-md);transform:translateY(-1px)}
+  .btn:active{transform:translateY(0)}
+  .btn.danger{background:var(--surface);color:var(--danger);border:1px solid var(--danger-soft);box-shadow:none}
+  .btn.danger:hover{background:var(--danger-soft);transform:none;box-shadow:none}
+  .btn.danger.confirming{background:var(--danger);color:#fff}
 
-  .controls{position:sticky;top:0;background:#fff;padding:.8rem 0;border-bottom:1px solid #ddd;margin-bottom:1rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;z-index:3}
-  .controls input[type=search]{flex:1;min-width:180px;padding:.45rem .6rem;font-size:.88rem;border:1px solid #ccc;border-radius:4px;font-family:inherit}
-  .count{font-size:.78rem;color:#888}
+  .controls{position:sticky;top:0;background:var(--bg);padding:.9rem 0;border-bottom:1px solid var(--border);margin-bottom:1.1rem;display:flex;gap:.7rem;align-items:center;flex-wrap:wrap;z-index:3}
+  .controls input[type=search]{flex:1;min-width:180px;padding:.5rem .65rem;font-size:.88rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;background:var(--surface);color:var(--text)}
+  .count{font-size:.78rem;color:var(--text-faint)}
 
-  details.card{border:1px solid #ddd;border-radius:6px;margin-bottom:.7rem;overflow:hidden}
-  details.card summary{padding:.75rem 1rem;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:.6rem;font-size:.95rem}
+  details.card{background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-sm);border-radius:var(--radius);margin-bottom:.7rem;overflow:hidden}
+  details.card summary{padding:.85rem 1.1rem;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:.6rem;font-size:.95rem}
   details.card summary::-webkit-details-marker{display:none}
-  details.card summary .name{font-weight:600}
-  details.card summary .meta{display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:#888;white-space:nowrap}
-  details.card[open] summary{border-bottom:1px solid #eee}
-  details.card summary::before{content:"▸";display:inline-block;margin-right:.5rem;color:#999;transition:transform .15s}
+  details.card summary .name{font-weight:700}
+  details.card summary .meta{display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--text-faint);white-space:nowrap}
+  details.card[open] summary{border-bottom:1px solid var(--border)}
+  details.card summary::before{content:"›";display:inline-block;margin-right:.5rem;color:var(--text-faint);transition:transform .15s;font-weight:700}
   details.card[open] summary::before{transform:rotate(90deg)}
 
-  .custom-tag,.edited-tag{font-size:.65rem;text-transform:uppercase;letter-spacing:.03em;padding:.1rem .4rem;border-radius:3px}
-  .custom-tag{color:#888;background:#f0f0f0}
-  .edited-tag{color:#7a5c00;background:#fff3cd}
+  .custom-tag,.edited-tag{font-size:.64rem;font-weight:600;text-transform:uppercase;letter-spacing:.03em;padding:.15rem .5rem;border-radius:999px}
+  .custom-tag{color:var(--text-faint);background:var(--border)}
+  .edited-tag{color:var(--warning);background:var(--warning-soft)}
 
-  .form-body{padding:1rem}
-  .field{margin-bottom:.55rem}
-  .field label{font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;color:#888;display:block;margin-bottom:.15rem}
-  .field input[type=text],.field input[type=number],.field textarea,.field select{width:100%;box-sizing:border-box;padding:.4rem .5rem;font-size:.85rem;border:1px solid #ccc;border-radius:4px;font-family:inherit}
+  .form-body{padding:1.1rem}
+  .field{margin-bottom:.6rem}
+  .field label{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text-faint);display:block;margin-bottom:.2rem}
+  .field input[type=text],.field input[type=number],.field textarea,.field select{width:100%;box-sizing:border-box;padding:.45rem .55rem;font-size:.85rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;background:var(--bg);color:var(--text)}
   .field textarea{min-height:3.2em;resize:vertical}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
-  .form-actions{margin-top:.7rem;display:flex;justify-content:space-between;align-items:center}
+  .form-actions{margin-top:.8rem;display:flex;justify-content:space-between;align-items:center}
 
-  dialog{border:1px solid #ccc;border-radius:8px;padding:1.2rem;max-width:480px;width:90vw}
-  dialog::backdrop{background:rgba(0,0,0,.4)}
-  dialog h2{font-size:1.05rem;margin:0 0 .8rem}
-  .dialog-actions{margin-top:.8rem;display:flex;justify-content:flex-end;gap:.6rem}
+  dialog{border:none;border-radius:var(--radius);padding:1.3rem;max-width:480px;width:90vw;background:var(--surface);color:var(--text);box-shadow:var(--shadow-md)}
+  dialog::backdrop{background:rgba(10,10,15,.5)}
+  dialog h2{font-size:1.1rem;font-weight:800;margin:0 0 .9rem}
+  .dialog-actions{margin-top:.9rem;display:flex;justify-content:flex-end;gap:.6rem}
 
   @media (max-width:600px){
     .grid2{grid-template-columns:1fr}

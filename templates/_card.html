@@ -1,5 +1,30 @@
 {% macro render_card(b, is_admin, today) %}
-<div class="card st-{{ 'closed' if b.status == 'closed' else ('progress' if b.status == 'in_progress' else 'available') }}"
+{% if b.status == 'closed' %}
+<details class="card st-closed" id="card-{{ b.id }}" data-id="{{ b.id }}"
+     data-bonus="{{ b.bonus }}" data-name="{{ b.name }}" data-status="{{ b.status }}"
+     data-paid="{{ 'true' if b.paid else 'false' }}" data-balance="{{ b.balance_status }}">
+  <summary>
+    <div class="summary-main">
+      <span class="summary-name">{{ b.name }}</span>
+      <span class="badge closed">Cooldown</span>
+    </div>
+    <div class="summary-side">
+      <span class="cooldown-info">{% if b.eligible_again %}Eligible {{ b.eligible_again }}{% else %}One-time — not eligible again{% endif %}</span>
+      <span class="amount">${{ "{:,}".format(b.bonus) }}</span>
+    </div>
+  </summary>
+  <div class="card-body">
+    <div class="subtitle">{{ b.subtitle }}</div>
+    <div class="detail"><b>Requirement:</b> {{ b.requirement }}</div>
+    <div class="detail"><b>Balance:</b> {{ b.balance_note }}</div>
+    <div class="detail"><b>Monthly fee:</b> {{ b.monthly_fee }}</div>
+    <div class="detail"><b>Exit:</b> {{ b.exit_text }}</div>
+    <div class="detail"><b>Cooldown:</b> {{ b.cooldown_text }}</div>
+    <div class="cooldown-info" style="margin-top:.7rem">Closed {{ b.closed_date }}{% if b.eligible_again %} — eligible again {{ b.eligible_again }}{% else %} — one-time bonus, not eligible again{% endif %}</div>
+  </div>
+</details>
+{% else %}
+<div class="card st-{{ 'progress' if b.status == 'in_progress' else 'available' }}"
      id="card-{{ b.id }}" data-id="{{ b.id }}"
      data-bonus="{{ b.bonus }}" data-name="{{ b.name }}" data-status="{{ b.status }}"
      data-paid="{{ 'true' if b.paid else 'false' }}" data-balance="{{ b.balance_status }}">
@@ -10,10 +35,8 @@
       <div class="tag-row">
         {% if b.status == 'available' %}
           <span class="badge available">Available</span>
-        {% elif b.status == 'in_progress' %}
-          <span class="badge in_progress">{{ 'Paid — awaiting closure' if b.paid else 'In progress' }}</span>
         {% else %}
-          <span class="badge closed">Cooldown</span>
+          <span class="badge in_progress">{{ 'Paid — awaiting closure' if b.paid else 'In progress' }}</span>
         {% endif %}
         <span class="balance-tag {{ b.balance_status }}" title="{{ b.balance_note }}">
           {% if b.balance_status == 'required' %}&#9888; Balance required{% elif b.balance_status == 'advisory' %}&#9679; No hold, but…{% else %}&#10003; No balance required{% endif %}
@@ -36,7 +59,7 @@
     </form>
     {% endif %}
 
-  {% elif b.status == 'in_progress' %}
+  {% else %}
     <div class="started-row">
       Started
       {% if is_admin %}
@@ -92,11 +115,7 @@
       </form>
     </div>
     {% endif %}
-
-  {% else %}
-    <div class="cooldown-info">
-      Closed {{ b.closed_date }}{% if b.eligible_again %} — eligible again {{ b.eligible_again }}{% else %} — one-time bonus, not eligible again{% endif %}
-    </div>
   {% endif %}
 </div>
+{% endif %}
 {% endmacro %}
