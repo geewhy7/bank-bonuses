@@ -149,7 +149,10 @@ def bank_view(bank, state):
     v["status"] = status
     v["started"] = st.get("started")
     v["checked"] = checked
+    v["checklist_complete"] = bool(checked) and all(checked)
+    v["met_date"] = st.get("met_date")
     v["paid"] = bool(st.get("paid"))
+    v["paid_date"] = st.get("paid_date")
     v["closed_date"] = st.get("closed_date")
     v["eligible_again"] = None
     v["safe_close_date"] = None
@@ -270,7 +273,9 @@ def start_bank(bank_id):
         "status": "in_progress",
         "started": today_iso(),
         "checked": [False] * len(bank["checklist"]),
+        "met_date": None,
         "paid": False,
+        "paid_date": None,
         "closed_date": None,
     }
     save_state(state)
@@ -296,6 +301,42 @@ def set_started_date(bank_id):
     return ajax_response(bank_id) if is_ajax() else redirect(url_for("index"))
 
 
+@app.route("/bonus/api/met-date/<bank_id>", methods=["POST"])
+def set_met_date(bank_id):
+    require_admin()
+    if bank_id not in effective_banks_by_id():
+        abort(404)
+    new_date = request.form.get("met_date", "")
+    try:
+        datetime.strptime(new_date, "%Y-%m-%d")
+    except ValueError:
+        abort(400)
+    state = load_state()
+    st = state.get(bank_id)
+    if st and st.get("status") == "in_progress":
+        st["met_date"] = new_date
+        save_state(state)
+    return ajax_response(bank_id) if is_ajax() else redirect(url_for("index"))
+
+
+@app.route("/bonus/api/paid-date/<bank_id>", methods=["POST"])
+def set_paid_date(bank_id):
+    require_admin()
+    if bank_id not in effective_banks_by_id():
+        abort(404)
+    new_date = request.form.get("paid_date", "")
+    try:
+        datetime.strptime(new_date, "%Y-%m-%d")
+    except ValueError:
+        abort(400)
+    state = load_state()
+    st = state.get(bank_id)
+    if st and st.get("status") == "in_progress":
+        st["paid_date"] = new_date
+        save_state(state)
+    return ajax_response(bank_id) if is_ajax() else redirect(url_for("index"))
+
+
 @app.route("/bonus/api/check/<bank_id>/<int:index>", methods=["POST"])
 def toggle_check(bank_id, index):
     require_admin()
@@ -310,6 +351,8 @@ def toggle_check(bank_id, index):
             checked = (checked + [False] * len(bank["checklist"]))[: len(bank["checklist"])]
         checked[index] = not checked[index]
         st["checked"] = checked
+        if checked and all(checked) and not st.get("met_date"):
+            st["met_date"] = today_iso()
         save_state(state)
     return ajax_response(bank_id) if is_ajax() else redirect(url_for("index"))
 
@@ -324,6 +367,8 @@ def toggle_paid(bank_id):
     st = state.get(bank_id)
     if st and st.get("status") == "in_progress":
         st["paid"] = not st.get("paid", False)
+        if st["paid"] and not st.get("paid_date"):
+            st["paid_date"] = today_iso()
         save_state(state)
     return ajax_response(bank_id) if is_ajax() else redirect(url_for("index"))
 

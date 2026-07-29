@@ -40,17 +40,20 @@
   .authlink a{color:var(--text-muted);text-decoration:none}
   .authlink a:hover{color:var(--text)}
 
-  .stats{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--border);padding:1rem 0 .85rem;margin-bottom:1rem;display:flex;gap:1.6rem;flex-wrap:wrap}
-  .stat .label{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint)}
-  .stat .amount{font-size:1.55rem;font-weight:750;letter-spacing:-.01em;line-height:1.25;transition:color .3s}
-
-  .legend{display:flex;gap:1.1rem;flex-wrap:wrap;font-size:.76rem;color:var(--text-muted);margin-bottom:1rem}
+  .legend{display:flex;gap:1.1rem;flex-wrap:wrap;font-size:.76rem;color:var(--text-muted);margin-bottom:1.1rem}
   .legend .dot{display:inline-block;width:.55rem;height:.55rem;border-radius:50%;margin-right:.35rem;vertical-align:middle}
   .legend .dot.required{background:var(--danger)}
   .legend .dot.advisory{background:var(--warning)}
   .legend .dot.not_required{background:var(--success)}
 
-  .toolbar{position:sticky;top:57px;z-index:4;background:var(--bg);padding:.7rem 0;margin-bottom:1.1rem;display:flex;gap:1.1rem;flex-wrap:wrap;align-items:flex-end;border-bottom:1px solid var(--border)}
+  /* Stats + toolbar move as one sticky unit — keeping them in a single
+     container avoids the two-tier sticky offsets fighting each other. */
+  .sticky-header{position:sticky;top:0;z-index:5;background:var(--bg);margin-bottom:1.1rem}
+  .stats{padding:1rem 0 .85rem;display:flex;gap:1.6rem;flex-wrap:wrap}
+  .stat .label{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint)}
+  .stat .amount{font-size:1.55rem;font-weight:750;letter-spacing:-.01em;line-height:1.25;transition:color .3s}
+
+  .toolbar{padding:.7rem 0;display:flex;gap:1.1rem;flex-wrap:wrap;align-items:flex-end;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
   .toolbar div{display:flex;flex-direction:column;gap:.25rem}
   .toolbar label{font-size:.66rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-faint)}
   .toolbar select{font-size:.83rem;padding:.4rem .55rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;background:var(--surface);color:var(--text)}
@@ -97,9 +100,11 @@
   .started-row{display:flex;align-items:center;gap:.55rem;font-size:.85rem;color:var(--text-muted);margin-top:.7rem}
   .started-row input[type=date]{padding:.3rem .4rem;font-size:.85rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-family:inherit}
 
-  .paid-row{margin-top:.8rem;padding-top:.7rem;border-top:1px dashed var(--border)}
+  .paid-row{margin-top:.8rem;padding-top:.7rem;border-top:1px dashed var(--border);display:flex;align-items:center;gap:.9rem;flex-wrap:wrap}
   .toggle-label{display:flex;align-items:center;gap:.6rem;cursor:pointer;font-size:.88rem;color:var(--text-muted)}
   .paid-row.is-paid .toggle-label{color:var(--success);font-weight:600}
+  .paid-date-row{display:flex;align-items:center;gap:.4rem;font-size:.83rem;color:var(--text-muted)}
+  .paid-date-row input[type=date]{padding:.25rem .35rem;font-size:.83rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-family:inherit}
   .toggle-switch{position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0}
   .toggle-switch input{opacity:0;width:0;height:0}
   .toggle-track{position:absolute;inset:0;background:var(--border);border-radius:20px;transition:background .2s}
@@ -133,7 +138,7 @@
 
   @media (max-width:600px){
     .card-head{flex-direction:column;gap:.15rem}
-    .toolbar{gap:.7rem;top:53px}
+    .toolbar{gap:.7rem}
   }
 </style>
 </head>
@@ -152,16 +157,17 @@
 <p class="sub">Comprehensive pass verified July 29, 2026 — {{ banks|length }} offers. Click a bank to start tracking it; check off requirements as you complete them; the account is safe to close once its closure date passes, and it collapses into cooldown until you're eligible again. Sources: Doctor of Credit and the banks' own offer and fee pages. Bonuses are taxable (1099-INT).</p>
 <p class="note-line">This is a personal live tracker — anyone with the link can browse it; only the logged-in admin can start, check off, or close anything.</p>
 
-<div class="stats">
-  <div class="stat"><div class="label">Available</div><div class="amount" data-stat="available">${{ "{:,}".format(totals.available) }}</div></div>
-  <div class="stat"><div class="label">In progress</div><div class="amount" data-stat="in_progress">${{ "{:,}".format(totals.in_progress) }}</div></div>
-  <div class="stat"><div class="label">Received</div><div class="amount" data-stat="received">${{ "{:,}".format(totals.received) }}</div></div>
-</div>
-
 <div class="legend">
   <span><span class="dot required"></span>Balance must stay in the account</span>
   <span><span class="dot advisory"></span>No balance required, but a caveat applies</span>
   <span><span class="dot not_required"></span>No balance required</span>
+</div>
+
+<div class="sticky-header">
+<div class="stats">
+  <div class="stat"><div class="label">Available</div><div class="amount" data-stat="available">${{ "{:,}".format(totals.available) }}</div></div>
+  <div class="stat"><div class="label">In progress</div><div class="amount" data-stat="in_progress">${{ "{:,}".format(totals.in_progress) }}</div></div>
+  <div class="stat"><div class="label">Received</div><div class="amount" data-stat="received">${{ "{:,}".format(totals.received) }}</div></div>
 </div>
 
 <div class="toolbar">
@@ -190,6 +196,7 @@
       <option value="not_required">No balance required</option>
     </select>
   </div>
+</div>
 </div>
 
 {% from '_card.html' import render_card %}

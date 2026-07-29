@@ -20,7 +20,8 @@
     <div class="detail"><b>Monthly fee:</b> {{ b.monthly_fee }}</div>
     <div class="detail"><b>Exit:</b> {{ b.exit_text }}</div>
     <div class="detail"><b>Cooldown:</b> {{ b.cooldown_text }}</div>
-    <div class="cooldown-info" style="margin-top:.7rem">Closed {{ b.closed_date }}{% if b.eligible_again %} — eligible again {{ b.eligible_again }}{% else %} — one-time bonus, not eligible again{% endif %}</div>
+    <div class="detail"><b>Timeline:</b> Started {{ b.started }}{% if b.met_date %} · Requirements met {{ b.met_date }}{% endif %}{% if b.paid_date %} · Paid {{ b.paid_date }}{% endif %} · Closed {{ b.closed_date }}</div>
+    <div class="cooldown-info" style="margin-top:.7rem">{% if b.eligible_again %}Eligible again {{ b.eligible_again }}{% else %}One-time bonus, not eligible again{% endif %}</div>
   </div>
 </details>
 {% else %}
@@ -87,6 +88,19 @@
       {% endfor %}
     </div>
 
+    {% if b.checklist_complete or b.met_date %}
+    <div class="started-row">
+      Requirements met
+      {% if is_admin %}
+      <form method="post" action="{{ url_for('set_met_date', bank_id=b.id) }}" class="js-action">
+        <input type="date" name="met_date" value="{{ b.met_date or '' }}" max="{{ today }}" onchange="this.form.requestSubmit()">
+      </form>
+      {% else %}
+        <strong>{{ b.met_date }}</strong>
+      {% endif %}
+    </div>
+    {% endif %}
+
     <div class="paid-row {{ 'is-paid' if b.paid else '' }}">
       {% if is_admin %}
       <form method="post" action="{{ url_for('toggle_paid', bank_id=b.id) }}" class="js-action">
@@ -95,8 +109,14 @@
           Payment received
         </label>
       </form>
+      {% if b.paid or b.paid_date %}
+      <form method="post" action="{{ url_for('set_paid_date', bank_id=b.id) }}" class="js-action paid-date-row">
+        on
+        <input type="date" name="paid_date" value="{{ b.paid_date or '' }}" max="{{ today }}" onchange="this.form.requestSubmit()">
+      </form>
+      {% endif %}
       {% else %}
-        <label class="toggle-label"><span class="toggle-switch"><input type="checkbox" disabled {{ 'checked' if b.paid else '' }}><span class="toggle-track"></span></span> Payment received</label>
+        <label class="toggle-label"><span class="toggle-switch"><input type="checkbox" disabled {{ 'checked' if b.paid else '' }}><span class="toggle-track"></span></span> Payment received{% if b.paid_date %} on <strong>{{ b.paid_date }}</strong>{% endif %}</label>
       {% endif %}
     </div>
 
