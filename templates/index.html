@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bank Bonuses — verified 7/29/26</title>
+<style>
+  body{font-family:system-ui,-apple-system,sans-serif;color:#222;background:#fff;max-width:960px;margin:0 auto 3rem;padding:0 1rem;line-height:1.45}
+  h1{font-size:1.3rem;margin-bottom:.2rem}
+  .sub{color:#666;font-size:.85rem;margin-bottom:1rem}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap}
+  .authlink{font-size:.8rem;color:#666;white-space:nowrap}
+  .authlink form{display:inline}
+  .authlink button{background:none;border:none;color:#666;text-decoration:underline;cursor:pointer;font-size:.8rem;padding:0}
+
+  .stats{position:sticky;top:0;z-index:5;background:#fff;border-bottom:2px solid #222;padding:.9rem 0 .8rem;margin-bottom:1.25rem;display:flex;gap:1.25rem;flex-wrap:wrap}
+  .stat .label{font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:#666}
+  .stat .amount{font-size:1.5rem;font-weight:700;line-height:1.2}
+
+  .card{border:1px solid #ddd;border-radius:6px;padding:1rem 1.1rem;margin-bottom:.9rem}
+  .card.st-closed{background:#f7f7f7}
+  .card.st-closed .detail,.card.st-closed .subtitle{color:#aaa}
+  .card-head{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;flex-wrap:wrap}
+  .card-head h2{font-size:1.05rem;margin:0}
+  .card.st-closed h2{color:#999}
+  .card-head .amount{font-size:1.3rem;font-weight:700;white-space:nowrap}
+  .card.st-closed .amount{color:#aaa}
+  .subtitle{color:#666;font-size:.82rem;margin-top:.1rem}
+
+  .badge{display:inline-block;font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;padding:.15rem .5rem;border-radius:3px;margin-top:.4rem}
+  .badge.available{background:#eef1ff;color:#3a4a99}
+  .badge.in_progress{background:#fff3cd;color:#7a5c00}
+  .badge.closed{background:#eee;color:#888}
+
+  .detail{font-size:.85rem;color:#555;margin-top:.55rem}
+  .detail b{color:#333}
+
+  .checklist{margin:.7rem 0 0}
+  .checklist label{display:flex;align-items:flex-start;gap:.5rem;font-size:.88rem;margin-bottom:.4rem;cursor:pointer}
+  .checklist input[type=checkbox]{margin-top:.2rem}
+  .checklist label.checked{color:#888;text-decoration:line-through}
+
+  .closure-badge{margin-top:.8rem;padding:.55rem .8rem;border-radius:5px;font-weight:600;font-size:.88rem}
+  .closure-badge.pending{background:#fff3cd;border:1px solid #ffe08a;color:#7a5c00}
+  .closure-badge.ready{background:#d4edda;border:1px solid #a3d9ae;color:#1e5e2f}
+
+  .row-actions{margin-top:.7rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+  .btn{padding:.45rem .9rem;font-size:.85rem;border:none;border-radius:4px;background:#222;color:#fff;cursor:pointer}
+  .btn:hover{background:#000}
+
+  .started-row{display:flex;align-items:center;gap:.5rem;font-size:.85rem;color:#555;margin-top:.6rem}
+  .started-row input[type=date]{padding:.25rem .35rem;font-size:.85rem;border:1px solid #ccc;border-radius:3px}
+
+  .paid-row{margin-top:.5rem;font-size:.88rem;display:flex;align-items:center;gap:.5rem}
+
+  .cooldown-info{margin-top:.5rem;font-size:.85rem;color:#888}
+
+  @media (max-width:600px){
+    .card-head{flex-direction:column;gap:.15rem}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1 style="margin-top:1.2rem">Bank Account Bonuses</h1>
+  <div class="authlink" style="margin-top:1.2rem">
+    {% if is_admin %}
+      logged in &middot;
+      <form method="post" action="{{ url_for('logout') }}"><button type="submit">log out</button></form>
+    {% else %}
+      <a href="{{ url_for('login') }}">admin log in</a>
+    {% endif %}
+  </div>
+</div>
+<p class="sub">Comprehensive pass verified July 29, 2026 — {{ banks|length }} offers. Click a bank to start tracking it; check off requirements as you complete them; the account is safe to close once its closure date passes, and it greys out on a cooldown timer until you're eligible again. Sources: Doctor of Credit and the banks' own offer and fee pages. Bonuses are taxable (1099-INT).</p>
+
+<div class="stats">
+  <div class="stat"><div class="label">Available</div><div class="amount">${{ "{:,}".format(totals.available) }}</div></div>
+  <div class="stat"><div class="label">In progress</div><div class="amount">${{ "{:,}".format(totals.in_progress) }}</div></div>
+  <div class="stat"><div class="label">Received</div><div class="amount">${{ "{:,}".format(totals.received) }}</div></div>
+  <div class="stat"><div class="label">In cooldown</div><div class="amount">${{ "{:,}".format(totals.cooldown) }}</div></div>
+</div>
+
+{% for b in banks %}
+<div class="card st-{{ 'closed' if b.status == 'closed' else ('progress' if b.status == 'in_progress' else 'available') }}">
+  <div class="card-head">
+    <div>
+      <h2>{{ b.name }}</h2>
+      <div class="subtitle">{{ b.subtitle }}</div>
+      {% if b.status == 'available' %}
+        <span class="badge available">Available</span>
+      {% elif b.status == 'in_progress' %}
+        <span class="badge in_progress">{{ 'Paid — awaiting closure' if b.paid else 'In progress' }}</span>
+      {% else %}
+        <span class="badge closed">Cooldown</span>
+      {% endif %}
+    </div>
+    <div class="amount">${{ "{:,}".format(b.bonus) }}</div>
+  </div>
+
+  <div class="detail"><b>Requirement:</b> {{ b.requirement }}</div>
+  <div class="detail"><b>Monthly fee:</b> {{ b.monthly_fee }}</div>
+  <div class="detail"><b>Exit:</b> {{ b.exit_text }}</div>
+  <div class="detail"><b>Cooldown:</b> {{ b.cooldown_text }}</div>
+
+  {% if b.status == 'available' %}
+    {% if is_admin %}
+    <form method="post" action="{{ url_for('start_bank', bank_id=b.id) }}">
+      <button type="submit" class="btn">Start tracking</button>
+    </form>
+    {% endif %}
+
+  {% elif b.status == 'in_progress' %}
+    <div class="started-row">
+      Started
+      {% if is_admin %}
+      <form method="post" action="{{ url_for('set_started_date', bank_id=b.id) }}">
+        <input type="date" name="started" value="{{ b.started }}" max="{{ today }}" onchange="this.form.submit()">
+      </form>
+      {% else %}
+        <strong>{{ b.started }}</strong>
+      {% endif %}
+    </div>
+
+    <div class="checklist">
+      {% for item in b.checklist %}
+        {% set checked = b.checked[loop.index0] %}
+        <label class="{{ 'checked' if checked else '' }}">
+          {% if is_admin %}
+          <form method="post" action="{{ url_for('toggle_check', bank_id=b.id, index=loop.index0) }}">
+            <input type="checkbox" onchange="this.form.submit()" {{ 'checked' if checked else '' }}>
+          </form>
+          {% else %}
+          <input type="checkbox" disabled {{ 'checked' if checked else '' }}>
+          {% endif %}
+          {{ item }}
+        </label>
+      {% endfor %}
+    </div>
+
+    <div class="paid-row">
+      {% if is_admin %}
+      <form method="post" action="{{ url_for('toggle_paid', bank_id=b.id) }}">
+        <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
+          <input type="checkbox" onchange="this.form.submit()" {{ 'checked' if b.paid else '' }}> Payment received
+        </label>
+      </form>
+      {% else %}
+        <label style="display:flex;align-items:center;gap:.5rem"><input type="checkbox" disabled {{ 'checked' if b.paid else '' }}> Payment received</label>
+      {% endif %}
+    </div>
+
+    {% if b.can_close %}
+      <div class="closure-badge ready">Safe to close — eligible since {{ b.safe_close_date }}</div>
+      {% if is_admin %}
+      <div class="row-actions">
+        <form method="post" action="{{ url_for('close_bank', bank_id=b.id) }}">
+          <button type="submit" class="btn">Close account</button>
+        </form>
+      </div>
+      {% endif %}
+    {% else %}
+      <div class="closure-badge pending">Safe to close on {{ b.safe_close_date }}</div>
+    {% endif %}
+
+  {% else %}
+    <div class="cooldown-info">
+      Closed {{ b.closed_date }}{% if b.eligible_again %} — eligible again {{ b.eligible_again }}{% else %} — one-time bonus, not eligible again{% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endfor %}
+
+</body>
+</html>

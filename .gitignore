@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+.claude/
+*.pyc
+.env
+data/state.json
+data/secret_key
